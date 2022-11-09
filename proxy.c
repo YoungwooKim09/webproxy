@@ -83,23 +83,23 @@ void parse_uri(char *url, char *hostname, char *port, char *filename)
   char arg1[MAXLINE], arg2[MAXLINE];
   
   p = strchr(url, '/');
-  strcpy(arg1, p+2);              // 52.78.37.170:5000/home.html
+  strcpy(arg1, p+2);              // hostname:port/home.html
 
   if (strstr(arg1, ":")) {
 
     p = strchr(arg1, ':');
     *p = '\0';
-    strcpy(hostname, arg1);       // hostname = 52.78.37.170
-    strcpy(arg2, p+1);            // 5000/home.html
+    strcpy(hostname, arg1);       // hostname
+    strcpy(arg2, p+1);            // port/home.html
 
     p = strchr(arg2, '/');
     *p = '\0';
-    strcpy(port, arg2);           // 5000
+    strcpy(port, arg2);           // port
     *p = '/';
     strcpy(filename, p);          // /home.html
   }
   
-  else {                          // 52.78.37.170/home.html
+  else {                          // hostname/home.html
     p = strchr(arg1, '/');
     *p = '\0';
     strcpy(hostname, arg1);
