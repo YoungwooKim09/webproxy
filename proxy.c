@@ -7,6 +7,7 @@
 
 void doit(int fd);
 void parse_uri(char *url, char *hostname, char *port, char *filename);
+void *thread(void *vargp);
 
 // /* You won't lose style points for including this long line in your code */
 // static const char *user_agent_hdr =
@@ -14,28 +15,28 @@ void parse_uri(char *url, char *hostname, char *port, char *filename);
 //     "Firefox/10.0.3\r\n";
 
 int main(int argc, char **argv) {
-  int listenfd, connfd;
+  int listenfd, *connfdp;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
+  pthread_t tid;
   struct sockaddr_storage clientaddr;
-
 
   /* Check command line args */
   if (argc != 2) {                       
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     exit(1);
   }
+  listenfd = Open_listenfd(argv[1]);
 
-  listenfd = Open_listenfd(argv[1]);      
   while (1) {                             
-    clientlen = sizeof(clientaddr);       
-    connfd = Accept(listenfd, (SA *)&clientaddr,      
-                    &clientlen);  // line:netp:tiny:accept
+    clientlen = sizeof(clientaddr);
+    connfdp = Malloc(sizeof(int));       
+    *connfdp = Accept(listenfd, (SA *)&clientaddr,      
+                    &clientlen);
+    Pthread_create(&tid, NULL, thread, connfdp);
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 
                 0);
     printf("Accepted connection from (%s, %s)\n", hostname, port);
-    doit(connfd);   // line:netp:tiny:doit
-    Close(connfd);  // line:netp:tiny:close
   }
 
   // printf("%s", user_agent_hdr);
@@ -60,7 +61,7 @@ void doit(int fd)
   // proxy에서 tiny연결
   server_fd = Open_clientfd(hostname, port);
   Rio_readinitb(&servrio, server_fd);
-  
+
   // tiny에 보낼 헤더 작성
   sprintf(buf, "GET %s HTTP/1.0\r\n", filename);
   sprintf(buf, "%sHOST: %s:%s\r\n", buf, hostname, port);
@@ -106,4 +107,15 @@ void parse_uri(char *url, char *hostname, char *port, char *filename)
     *p ='/';
     strcpy(filename, p);
   }
+}
+
+/* Thread routine */
+void *thread(void *vargp)
+{
+  int connfd = *((int *)vargp);
+  Pthread_detach(pthread_self());
+  Free(vargp);
+  doit(connfd);
+  Close(connfd);
+  return NULL;
 }
